@@ -12,12 +12,6 @@ import ExpoWebServerModule from "./ExpoWebServerModule";
 const emitter = new EventEmitter(ExpoWebServerModule);
 const requestCallbacks: WebCallback[] = [];
 
-if (module.hot) {
-  module.hot.accept(() => ExpoWebServerModule.stop());
-
-  module.hot.dispose(() => ExpoWebServerModule.stop());
-}
-
 export const start = () => {
   emitter.addListener<RequestEvent>("onRequest", async (event) => {
     const responseHandler = requestCallbacks.find((c) => c.uuid === event.uuid);
