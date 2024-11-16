@@ -1,44 +1,128 @@
 import ExpoModulesCore
+import Foundation
+import GCDWebServer
+
+extension Dictionary {
+  var jsonString: String {
+    guard let data = try? JSONSerialization.data(withJSONObject: self) else {
+      return "{}"
+    }
+    return String(data: data, encoding: .utf8) ?? "{}"
+  }
+}
 
 public class ExpoWebServerModule: Module {
-  // Each module class must implement the definition function. The definition consists of components
-  // that describes the module's functionality and behavior.
-  // See https://docs.expo.dev/modules/module-api for more details about available components.
+  private let server = GCDWebServer()
+  private var port: UInt = 8000
+  private var responseCallbacks = [String: GCDWebServerCompletionBlock]()
+  private var bgTaskIdentifier = UIBackgroundTaskIdentifier.invalid
+
   public func definition() -> ModuleDefinition {
-    // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
-    // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
-    // The module will be accessible from `requireNativeModule('ExpoWebServer')` in JavaScript.
     Name("ExpoWebServer")
 
-    // Sets constant properties on the module. Can take a dictionary or a closure that returns a dictionary.
-    Constants([
-      "PI": Double.pi
-    ])
+    Events("onStatusUpdate", "onRequest")
 
-    // Defines event names that the module can send to JavaScript.
-    Events("onChange")
+    Function("setup", setupHandler)
+    Function("start", startHandler)
+    Function("route", routeHandler)
+    Function("respond", respondHandler)
+    Function("stop", stopHandler)
+  }
 
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      return "Hello world! 👋"
-    }
+  private func setupHandler(port: UInt) {
+    self.port = port
+  }
 
-    // Defines a JavaScript function that always returns a Promise and whose native code
-    // is by default dispatched on the different thread than the JavaScript runtime runs on.
-    AsyncFunction("setValueAsync") { (value: String) in
-      // Send an event to JavaScript.
-      self.sendEvent("onChange", [
-        "value": value
-      ])
-    }
+  private func startHandler() {
+    startServer(status: "STARTED", message: "Server started")
+  }
 
-    // Enables the module to be used as a native view. Definition components that are accepted as part of the
-    // view definition: Prop, Events.
-    View(ExpoWebServerView.self) {
-      // Defines a setter for the `name` prop.
-      Prop("name") { (view: ExpoWebServerView, prop: String) in
-        print(prop)
+  private func routeHandler(path: String, method: String, uuid: String) {
+
+    server.addHandler(
+      forMethod: method, path: path, request: GCDWebServerDataRequest.self,
+      asyncProcessBlock: { (request, completionBlock) in
+        if let dataRequest = request as? GCDWebServerDataRequest {
+          self.responseCallbacks[uuid] = completionBlock
+          //TODO: NSString* charset = GCDWebServerExtractHeaderValueParameter(self.contentType, @"charset"); for string parsing
+          self.sendEvent(
+            "onRequest",
+            [
+              "uuid": uuid,
+              "method": request.method,
+              "path": path,
+              "body":
+                (request.method == "POST" || request.method == "PUT" || request.method == "PATCH")
+                ? String(data: dataRequest.data, encoding: .utf8) : nil,
+              "headersJson": request.headers.jsonString,
+              "paramsJson": request.query?.jsonString ?? "{}",
+            ])
+        }
+      })
+  }
+
+  private func respondHandler(
+    udid: String,
+    statusCode: Int,
+    statusDescription: String,
+    contentType: String,
+    headers: [String: String],
+    body: String,
+    file: String?
+  ) {
+    if let callback = self.responseCallbacks[udid] {
+      var response: GCDWebServerResponse?
+      if let file = file {
+        response = GCDWebServerFileResponse(file: file.replacingOccurrences(of: "file://", with: ""), isAttachment: false)
+      } else if let responseData = body.data(using: .utf8) {
+        response = GCDWebServerDataResponse(data: responseData, contentType: contentType)
       }
+
+      if let response = response {
+        for (key, value) in headers {
+          response.setValue(value, forAdditionalHeader: key)
+        }
+        callback(response)
+        self.responseCallbacks.removeValue(forKey: udid)
+      }
+    }
+  }
+
+  private func stopHandler() {
+    stopServer(status: "STOPPED", message: "Server stopped")
+  }
+
+  private func startServer(status: String, message: String) {
+    stopServer()
+    server.start(withPort: self.port, bonjourName: nil)
+    if !server.isRunning {
+      sendEvent(
+        "onStatusUpdate",
+        [
+          "status": "ERROR",
+          "message": "Unknown error starting server",
+        ])
+    } else {
+      sendEvent(
+        "onStatusUpdate",
+        [
+          "status": status,
+          "message": message,
+        ])
+    }
+  }
+
+  private func stopServer(status: String? = nil, message: String? = nil) {
+    if server.isRunning {
+      server.stop()
+    }
+    if let status = status, let message = message {
+      sendEvent(
+        "onStatusUpdate",
+        [
+          "status": status,
+          "message": message,
+        ])
     }
   }
 }

@@ -1,26 +1,76 @@
-import { NativeModulesProxy, EventEmitter, Subscription } from 'expo-modules-core';
+import { EventEmitter } from "expo-modules-core";
 
-// Import the native module. On web, it will be resolved to ExpoWebServer.web.ts
-// and on native platforms to ExpoWebServer.ts
-import ExpoWebServerModule from './ExpoWebServerModule';
-import ExpoWebServerView from './ExpoWebServerView';
-import { ChangeEventPayload, ExpoWebServerViewProps } from './ExpoWebServer.types';
+import {
+  WebCallback,
+  HttpMethod,
+  RequestEvent,
+  StatusEvent,
+  WebResponse,
+} from "./ExpoWebServer.types";
+import ExpoWebServerModule from "./ExpoWebServerModule";
 
-// Get the native constant value.
-export const PI = ExpoWebServerModule.PI;
+const emitter = new EventEmitter(ExpoWebServerModule);
+const requestCallbacks: WebCallback[] = [];
 
-export function hello(): string {
-  return ExpoWebServerModule.hello();
+if (module.hot) {
+  module.hot.accept(() => ExpoWebServerModule.stop());
+
+  module.hot.dispose(() => ExpoWebServerModule.stop());
 }
 
-export async function setValueAsync(value: string) {
-  return await ExpoWebServerModule.setValueAsync(value);
-}
+export const start = () => {
+  emitter.addListener<RequestEvent>("onRequest", async (event) => {
+    const responseHandler = requestCallbacks.find((c) => c.uuid === event.uuid);
+    if (!responseHandler) {
+      ExpoWebServerModule.respond(
+        event.uuid,
+        404,
+        "Not Found",
+        "application/json",
+        {},
+        JSON.stringify({ error: "Handler not found" }),
+      );
+      return;
+    }
+    const response = await responseHandler.callback(event);
+    ExpoWebServerModule.respond(
+      event.uuid,
+      response.statusCode || 200,
+      response.statusDescription || "OK",
+      response.contentType || "application/json",
+      response.headers || {},
+      response.body || "{}",
+      response.file,
+    );
+  });
+  ExpoWebServerModule.start();
+};
 
-const emitter = new EventEmitter(ExpoWebServerModule ?? NativeModulesProxy.ExpoWebServer);
+export const route = (
+  path: string,
+  method: HttpMethod,
+  callback: (request: RequestEvent) => Promise<WebResponse>,
+) => {
+  const uuid = Math.random().toString(16).slice(2);
+  requestCallbacks.push({
+    method,
+    path,
+    uuid,
+    callback,
+  });
+  ExpoWebServerModule.route(path, method, uuid);
+};
 
-export function addChangeListener(listener: (event: ChangeEventPayload) => void): Subscription {
-  return emitter.addListener<ChangeEventPayload>('onChange', listener);
-}
+export const setup = (
+  port: number,
+  onStatusUpdate?: (event: StatusEvent) => void,
+) => {
+  if (onStatusUpdate) {
+    emitter.addListener<StatusEvent>("onStatusUpdate", async (event) => {
+      onStatusUpdate(event);
+    });
+  }
+  ExpoWebServerModule.setup(port);
+};
 
-export { ExpoWebServerView, ExpoWebServerViewProps, ChangeEventPayload };
+export const stop = () => ExpoWebServerModule.stop();
