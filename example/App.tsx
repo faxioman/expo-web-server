@@ -77,7 +77,7 @@ export default function App() {
         body: request.body,
       };
     });
-    server.route("/html", "GET", async (request) => {
+    server.route("/html$", "GET", async (request) => {
       console.log("Request", "/html", "GET", request);
       onServerCalled();
       return {

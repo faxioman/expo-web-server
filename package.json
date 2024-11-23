@@ -1,6 +1,6 @@
 {
-  "name": "@faxioman/expo-web-server",
-  "version": "0.1.0",
+  "name": "@rapidosas/expo-web-server",
+  "version": "0.1.1",
   "description": "Simple Web Server",
   "main": "build/index.js",
   "types": "build/index.d.ts",

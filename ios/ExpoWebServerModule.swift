@@ -40,7 +40,7 @@ public class ExpoWebServerModule: Module {
   private func routeHandler(path: String, method: String, uuid: String) {
 
     server.addHandler(
-      forMethod: method, path: path, request: GCDWebServerDataRequest.self,
+      forMethod: method, pathRegex: path, request: GCDWebServerDataRequest.self,
       asyncProcessBlock: { (request, completionBlock) in
         if let dataRequest = request as? GCDWebServerDataRequest {
           self.responseCallbacks[uuid] = completionBlock
