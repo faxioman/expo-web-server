@@ -42,21 +42,23 @@ public class ExpoWebServerModule: Module {
     server.addHandler(
       forMethod: method, pathRegex: path, request: GCDWebServerDataRequest.self,
       asyncProcessBlock: { (request, completionBlock) in
-        if let dataRequest = request as? GCDWebServerDataRequest {
-          self.responseCallbacks[uuid] = completionBlock
-          //TODO: NSString* charset = GCDWebServerExtractHeaderValueParameter(self.contentType, @"charset"); for string parsing
-          self.sendEvent(
-            "onRequest",
-            [
-              "uuid": uuid,
-              "method": request.method,
-              "path": path,
-              "body":
-                (request.method == "POST" || request.method == "PUT" || request.method == "PATCH")
-                ? String(data: dataRequest.data, encoding: .utf8) : nil,
-              "headersJson": request.headers.jsonString,
-              "paramsJson": request.query?.jsonString ?? "{}",
-            ])
+        DispatchQueue.main.async {
+          if let dataRequest = request as? GCDWebServerDataRequest {
+            self.responseCallbacks[uuid] = completionBlock
+            //TODO: NSString* charset = GCDWebServerExtractHeaderValueParameter(self.contentType, @"charset"); for string parsing
+            self.sendEvent(
+              "onRequest",
+              [
+                "uuid": uuid,
+                "method": request.method,
+                "path": path,
+                "body":
+                  (request.method == "POST" || request.method == "PUT" || request.method == "PATCH")
+                  ? String(data: dataRequest.data, encoding: .utf8) : nil,
+                "headersJson": request.headers.jsonString,
+                "paramsJson": request.query?.jsonString ?? "{}",
+              ])
+          }
         }
       })
   }
@@ -70,20 +72,23 @@ public class ExpoWebServerModule: Module {
     body: String,
     file: String?
   ) {
-    if let callback = self.responseCallbacks[udid] {
-      var response: GCDWebServerResponse?
-      if let file = file {
-        response = GCDWebServerFileResponse(file: file.replacingOccurrences(of: "file://", with: ""), isAttachment: false)
-      } else if let responseData = body.data(using: .utf8) {
-        response = GCDWebServerDataResponse(data: responseData, contentType: contentType)
-      }
-
-      if let response = response {
-        for (key, value) in headers {
-          response.setValue(value, forAdditionalHeader: key)
+    DispatchQueue.main.async {
+      if let callback = self.responseCallbacks[udid] {
+        var response: GCDWebServerResponse?
+        if let file = file {
+          response = GCDWebServerFileResponse(
+            file: file.replacingOccurrences(of: "file://", with: ""), isAttachment: false)
+        } else if let responseData = body.data(using: .utf8) {
+          response = GCDWebServerDataResponse(data: responseData, contentType: contentType)
         }
-        callback(response)
-        self.responseCallbacks.removeValue(forKey: udid)
+
+        if let response = response {
+          for (key, value) in headers {
+            response.setValue(value, forAdditionalHeader: key)
+          }
+          callback(response)
+          self.responseCallbacks.removeValue(forKey: udid)
+        }
       }
     }
   }
@@ -125,4 +130,5 @@ public class ExpoWebServerModule: Module {
         ])
     }
   }
+
 }
