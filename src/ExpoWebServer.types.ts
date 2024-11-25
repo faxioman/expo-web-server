@@ -1,32 +1,29 @@
 export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "OPTIONS";
-export type Status = "STARTED" | "STOPPED" | "ERROR";
-
-export interface StatusEvent {
-  status: Status;
-  message: string;
-}
 
 export interface RequestEvent {
-  uuid: string;
-  method: string;
+  requestId: string;
+  method: HttpMethod;
   path: string;
   body: string;
   headersJson: string;
   paramsJson: string;
 }
 
+export interface Request {
+  requestId: string;
+  method: HttpMethod;
+  path: string;
+  body: string;
+  headers: { [key: string]: string };
+  params: { [key: string]: string };
+}
+
 export interface WebResponse {
+  requestId: string;
   statusCode?: number;
   statusDescription?: string;
   contentType?: string;
   headers?: Record<string, string>;
   body?: string;
   file?: string;
-}
-
-export interface WebCallback {
-  method: string;
-  path: string;
-  uuid: string;
-  callback: (request: RequestEvent) => Promise<WebResponse>;
 }
