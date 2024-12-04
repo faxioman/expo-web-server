@@ -1,6 +1,6 @@
 {
   "name": "@rapidosas/expo-web-server",
-  "version": "0.1.2",
+  "version": "0.2.3",
   "description": "Simple Web Server",
   "main": "build/index.js",
   "types": "build/index.d.ts",
@@ -28,11 +28,10 @@
   "author": "Fabio Masini <fabio@rapidosoft.it> (https://github.com/faxioman)",
   "license": "MIT",
   "homepage": "https://github.com/faxioman/expo-web-server#readme",
-  "dependencies": {},
   "devDependencies": {
     "@types/react": "^18.0.25",
-    "expo-module-scripts": "^3.5.2",
-    "expo-modules-core": "^1.12.24"
+    "expo-module-scripts": "^4.0.2",
+    "expo-modules-core": "^2.0.6"
   },
   "peerDependencies": {
     "expo": "*",

@@ -1,9 +1,9 @@
-import { EventEmitter } from "expo-modules-core";
+import { LegacyEventEmitter } from "expo-modules-core";
 
 import { RequestEvent, WebResponse, Request } from "./ExpoWebServer.types";
 import ExpoWebServerModule from "./ExpoWebServerModule";
 
-const emitter = new EventEmitter(ExpoWebServerModule);
+const emitter = new LegacyEventEmitter(ExpoWebServerModule);
 
 export const start = (port: number, callback) => {
   emitter.addListener<RequestEvent>("onRequest", async (event) => {
