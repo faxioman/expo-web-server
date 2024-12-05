@@ -1,6 +1,6 @@
 {
   "name": "@rapidosas/expo-web-server",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Simple Web Server",
   "main": "build/index.js",
   "types": "build/index.d.ts",
