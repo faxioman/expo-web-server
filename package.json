@@ -1,6 +1,6 @@
 {
   "name": "@rapidosas/expo-web-server",
-  "version": "0.2.3",
+  "version": "0.2.5",
   "description": "Simple Web Server",
   "main": "build/index.js",
   "types": "build/index.d.ts",
@@ -11,7 +11,6 @@
     "test": "expo-module test",
     "prepare": "expo-module prepare",
     "prepublishOnly": "expo-module prepublishOnly",
-    "expo-module": "expo-module",
     "open:ios": "xed example/ios",
     "open:android": "open -a \"Android Studio\" example/android"
   },
@@ -30,12 +29,12 @@
   "homepage": "https://github.com/faxioman/expo-web-server#readme",
   "devDependencies": {
     "@types/react": "^18.0.25",
-    "expo-module-scripts": "^4.0.2",
-    "expo-modules-core": "^2.0.6"
+    "expo-module-scripts": "^4.0.2"
   },
   "peerDependencies": {
     "expo": "*",
     "react": "*",
-    "react-native": "*"
+    "react-native": "*",
+    "expo-modules-core": "*"
   }
 }
